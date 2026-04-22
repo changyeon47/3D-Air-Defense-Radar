@@ -1,0 +1,141 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="air_defense">
+
+    <!-- 필수 시스템 플러그인 -->
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <!-- 태양광 -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- 지면 -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>1000 1000</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>1000 1000</size></plane></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── 정적 배경 구조물 (배경 학습용) ──────────────────────────── -->
+    <model name="building_ne">
+      <static>true</static>
+      <pose>28 32 0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>8 8 16</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>8 8 16</size></box></geometry>
+          <material><ambient>0.4 0.4 0.4 1</ambient><diffuse>0.4 0.4 0.4 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="building_nw">
+      <static>true</static>
+      <pose>-33 26 0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>6 6 12</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>6 6 12</size></box></geometry>
+          <material><ambient>0.4 0.4 0.4 1</ambient><diffuse>0.4 0.4 0.4 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="building_s">
+      <static>true</static>
+      <pose>10 -34 0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>10 10 20</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>10 10 20</size></box></geometry>
+          <material><ambient>0.4 0.4 0.4 1</ambient><diffuse>0.4 0.4 0.4 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── 3D LiDAR 센서 (대공 특화) ───────────────────────────────── -->
+    <!--
+      앙각: 5° ~ 75° (상공 집중)
+      수평: 360° / 1° 스텝
+      채널: 16 (수직)
+      레이 총 수: 16 × 360 = 5,760
+    -->
+    <model name="lidar_pole">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+
+      <link name="pole_link">
+        <visual name="vis">
+          <pose>0 0 1 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>2</length></cylinder></geometry>
+        </visual>
+      </link>
+
+      <link name="lidar_link">
+        <pose>0 0 2 0 0 0</pose>
+        <sensor name="lidar_sensor" type="lidar">
+          <always_on>true</always_on>
+          <update_rate>10</update_rate>
+          <visualize>false</visualize>
+          <topic>/lidar/points</topic>
+          <lidar>
+            <scan>
+              <horizontal>
+                <samples>360</samples>
+                <resolution>1</resolution>
+                <min_angle>0</min_angle>
+                <max_angle>6.28318</max_angle>
+              </horizontal>
+              <vertical>
+                <samples>16</samples>
+                <resolution>1</resolution>
+                <min_angle>0.08727</min_angle>
+                <max_angle>1.30900</max_angle>
+              </vertical>
+            </scan>
+            <range>
+              <min>1.0</min>
+              <max>150.0</max>
+              <resolution>0.05</resolution>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>0.05</stddev>
+            </noise>
+          </lidar>
+        </sensor>
+      </link>
+
+      <joint name="pole_lidar_joint" type="fixed">
+        <parent>pole_link</parent>
+        <child>lidar_link</child>
+      </joint>
+    </model>
+
+  </world>
+</sdf>

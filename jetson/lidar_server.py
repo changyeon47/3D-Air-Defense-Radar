@@ -134,8 +134,8 @@ def lidar_thread():
     laser.setlidaropt(ydlidar.LidarPropSampleRate,     5)
     laser.setlidaropt(ydlidar.LidarPropMaxRange,       MAX_RANGE)
     laser.setlidaropt(ydlidar.LidarPropMinRange,       MIN_RANGE)
-    laser.setlidaropt(ydlidar.LidarPropMaxAngle,       180.0)
-    laser.setlidaropt(ydlidar.LidarPropMinAngle,      -180.0)
+    laser.setlidaropt(ydlidar.LidarPropMaxAngle,        50.0)
+    laser.setlidaropt(ydlidar.LidarPropMinAngle,      -50.0)
     laser.setlidaropt(ydlidar.LidarPropIntenstiy,      False)
 
     if not laser.initialize():
