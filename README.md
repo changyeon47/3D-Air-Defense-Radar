@@ -241,6 +241,6 @@ ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 | `removeTimeout` | 1.5 s | 미감지 시 제거 대기 시간 |
 
 ## 실행 영상
-Youtube 링크 : https://youtu.be/5MsQs7Yd8cs
+<img width="2558" height="1392" alt="image" src="https://github.com/user-attachments/assets/fb80faa8-a5f3-4b60-847c-fe14ff6a81d7" /> Youtube 링크 : https://youtu.be/5MsQs7Yd8cs
 
 
