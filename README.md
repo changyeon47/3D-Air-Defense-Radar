@@ -1,7 +1,7 @@
 # 3D Air Defense Radar System
 ### Gazebo + ROS2 + Unity 3D 실시간 방공 시뮬레이션
 
-> Gazebo Harmonic + ROS2 Jazzy + Unity 3D를 연동한 실시간 3D 방공 레이더 시뮬레이션 졸업작품
+> Gazebo Harmonic + ROS2 Jazzy + Unity 3D를 연동한 실시간 3D 방공 레이더 시뮬레이션
 
 ---
 
