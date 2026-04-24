@@ -239,3 +239,8 @@ ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 | `positionScale` | 1 | 위치 배율 |
 | `targetSize` | 2.5 | 타겟 구체 크기 |
 | `removeTimeout` | 1.5 s | 미감지 시 제거 대기 시간 |
+
+## 실행 영상
+
+
+
