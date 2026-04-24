@@ -21,9 +21,10 @@ public class AimCamera : MonoBehaviour
     public float fov       = 40f;     // 좁을수록 줌인 효과
     public float smoothing = 8f;      // 회전 보간 속도
 
-    private Camera    _cam;
-    private Transform _podPitch;      // 런처 포드 피치 트랜스폼
-    private Texture2D _whiteTex;
+    private Camera          _cam;
+    private Transform       _podPitch;      // 런처 포드 피치 트랜스폼
+    private THAADLauncher   _launcher;
+    private Texture2D       _whiteTex;
 
     void Awake()
     {
@@ -45,31 +46,47 @@ public class AimCamera : MonoBehaviour
 
     void LateUpdate()
     {
-        // PodPitch 캐싱 (Awake에서는 아직 THAADLauncher가 빌드 전일 수 있음)
+        // 런처 캐싱
+        if (_launcher == null)
+        {
+            _launcher = FindFirstObjectByType<THAADLauncher>();
+            if (_launcher == null) return;
+        }
         if (_podPitch == null)
         {
-            THAADLauncher launcher = FindFirstObjectByType<THAADLauncher>();
-            if (launcher != null)
-                _podPitch = launcher.GetPodPitch();
+            _podPitch = _launcher.GetPodPitch();
             if (_podPitch == null) return;
         }
 
-        // podYaw가 -toTarget 방향으로 세팅되므로 실제 발사 방향은 반대
-        Vector3 firingDir = -_podPitch.forward;
+        // TopCap(은색 사각형) 위치를 카메라 기준점으로 사용
+        Transform topCap = _launcher.GetTopCap();
+        Vector3 camOrigin = topCap != null ? topCap.position : _podPitch.position;
 
-        // 카메라 위치: 발사 방향 뒤쪽에서 위로 올려서 튜브 앞을 내려다봄
-        Vector3 camPos = _podPitch.position
-                       - firingDir * 2.5f
-                       + Vector3.up * 1.5f;
+        // 타겟 방향을 직접 계산
+        Vector3 firingDir = _podPitch.up; // 타겟 없을 때 폴백 (꼭대기 방향)
+        GameObject[] tgts = GameObject.FindGameObjectsWithTag("Target");
+        if (tgts.Length > 0)
+        {
+            float minD = float.MaxValue;
+            Vector3 nearest = camOrigin;
+            foreach (var t in tgts)
+            {
+                float d = Vector3.Distance(camOrigin, t.transform.position);
+                if (d < minD) { minD = d; nearest = t.transform.position; }
+            }
+            firingDir = (nearest - camOrigin).normalized;
+        }
+        if (firingDir.sqrMagnitude < 0.01f) return;
+
+        // TopCap 표면 바깥쪽(포드 위쪽 방향)으로 0.5m 나와서 타겟을 바라봄
+        Vector3 camPos = camOrigin + _podPitch.up * 0.5f;
         _cam.transform.position = Vector3.Lerp(
             _cam.transform.position, camPos, Time.deltaTime * smoothing);
 
-        // 카메라 회전: 실제 발사 방향을 바라봄
-        if (firingDir.sqrMagnitude > 0.01f)
-            _cam.transform.rotation = Quaternion.Slerp(
-                _cam.transform.rotation,
-                Quaternion.LookRotation(firingDir, Vector3.up),
-                Time.deltaTime * smoothing);
+        _cam.transform.rotation = Quaternion.Slerp(
+            _cam.transform.rotation,
+            Quaternion.LookRotation(firingDir, Vector3.up),
+            Time.deltaTime * smoothing);
     }
 
     void OnGUI()

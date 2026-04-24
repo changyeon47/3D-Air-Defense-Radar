@@ -173,7 +173,7 @@ public class RadarDisplay : MonoBehaviour
         Transform podYaw = launcher.transform.Find("PodYaw");
         if (podYaw == null) return;
 
-        // podYaw.forward는 타겟 반대 방향이므로 실제 조준 방향은 반전
+        // podYaw.forward는 타겟 반대 방향이므로 부호 반전
         Vector3 fwd = -podYaw.forward;
         float nx = fwd.x;
         float nz = fwd.z;

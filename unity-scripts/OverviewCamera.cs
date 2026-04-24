@@ -85,8 +85,23 @@ public class OverviewCamera : MonoBehaviour
         _cam.transform.position = Vector3.Lerp(
             _cam.transform.position, desiredPos, Time.deltaTime * posSmoothing);
 
-        // 타겟이 멀수록 FOV 넓힘
-        _targetFov = Mathf.Clamp(30f + maxDist * 1.2f, minFov, maxFov);
+        // 카메라 시야에서 벗어난 오브젝트가 있으면 FOV 자동 확대
+        float requiredHalfFov = minFov * 0.5f;
+        Vector3 camPos = _cam.transform.position;
+        Vector3 camFwd = _cam.transform.forward;
+
+        // 발사대 포함 각도 계산
+        float aLauncher = Vector3.Angle(camFwd, (launcherPos - camPos).normalized);
+        requiredHalfFov = Mathf.Max(requiredHalfFov, aLauncher + 8f);
+
+        // 모든 타겟의 각도 계산 — 벗어난 게 있으면 FOV 확대
+        foreach (var t in targets)
+        {
+            float a = Vector3.Angle(camFwd, (t.transform.position - camPos).normalized);
+            requiredHalfFov = Mathf.Max(requiredHalfFov, a + 8f);
+        }
+
+        _targetFov = Mathf.Clamp(requiredHalfFov * 2f, minFov, maxFov);
         _cam.fieldOfView = Mathf.Lerp(
             _cam.fieldOfView, _targetFov, Time.deltaTime * fovSmoothing);
 

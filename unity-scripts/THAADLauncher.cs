@@ -34,8 +34,9 @@ public class THAADLauncher : MonoBehaviour
     private Transform _podYaw;   // 좌우 회전
     private Transform _podPitch; // 위아래 회전
 
-    // 미사일 발사 위치
+    // 미사일 발사 위치 & TopCap (AimCamera 기준)
     private Transform[] _tubes = new Transform[6];
+    private Transform   _topCap;
     private int   _nextTube   = 0;
     private float _lastFire   = -999f;
     private bool  _isRotating = false;
@@ -136,14 +137,14 @@ public class THAADLauncher : MonoBehaviour
     // ── 포드 마운트 (좌우+상하 회전) ─────────────────────
     void BuildPodMount()
     {
-        // 마운트 베이스
-        Box("MountBase", new Vector3(0f,1.0f,-1.5f), new Vector3(2.0f,0.5f,2.0f), _darkMat);
-        Box("MountTop",  new Vector3(0f,1.3f,-1.5f), new Vector3(1.6f,0.2f,1.6f), _silverMat);
+        // 마운트 베이스 (트럭 적재함 뒤쪽)
+        Box("MountBase", new Vector3(0f,1.0f,-2.5f), new Vector3(2.0f,0.5f,2.0f), _darkMat);
+        Box("MountTop",  new Vector3(0f,1.3f,-2.5f), new Vector3(1.6f,0.2f,1.6f), _silverMat);
 
         // 좌우 회전축
         _podYaw = new GameObject("PodYaw").transform;
         _podYaw.SetParent(transform, false);
-        _podYaw.localPosition = new Vector3(0f, 1.4f, -1.5f);
+        _podYaw.localPosition = new Vector3(0f, 1.4f, -2.5f);
 
         // 상하 회전축
         _podPitch = new GameObject("PodPitch").transform;
@@ -177,8 +178,9 @@ public class THAADLauncher : MonoBehaviour
         BoxChild(_podPivot,"SideL",new Vector3( 1.12f,2.0f,0f),new Vector3(0.08f,4.2f,1.1f),_darkMat);
         BoxChild(_podPivot,"SideR",new Vector3(-1.12f,2.0f,0f),new Vector3(0.08f,4.2f,1.1f),_darkMat);
 
-        // 상단 캡
-        BoxChild(_podPivot,"TopCap",new Vector3(0f,4.3f,0f),new Vector3(2.2f,0.2f,1.1f),_silverMat);
+        // 상단 캡 (AimCamera 기준점)
+        GameObject topCapGO = BoxChild(_podPivot,"TopCap",new Vector3(0f,4.3f,0f),new Vector3(2.2f,0.2f,1.1f),_silverMat);
+        _topCap = topCapGO.transform;
 
         // 미사일 튜브 2열 3행
         float[] xs = { 0.58f, -0.58f };
@@ -198,19 +200,19 @@ public class THAADLauncher : MonoBehaviour
         GameObject tube = Cyl_Child(parent,$"TubeOut{idx}",lPos,
                           new Vector3(0.42f,0.56f,0.42f),_darkMat, new Vector3(90f,0f,0f));
 
-        // 내부 그림자 효과
-        Cyl_Child(parent,$"TubeIn{idx}",lPos+new Vector3(0f,0f,0.5f),
+        // 내부 그림자 효과 (포드 -Z면 = 발사 방향)
+        Cyl_Child(parent,$"TubeIn{idx}",lPos+new Vector3(0f,0f,-0.5f),
                   new Vector3(0.36f,0.04f,0.36f),Mat(new Color(0.05f,0.05f,0.05f),0f,0f),
                   new Vector3(90f,0f,0f));
 
         // 튜브 앞 링
-        Cyl_Child(parent,$"TubeRing{idx}",lPos+new Vector3(0f,0f,0.54f),
+        Cyl_Child(parent,$"TubeRing{idx}",lPos+new Vector3(0f,0f,-0.54f),
                   new Vector3(0.46f,0.04f,0.46f),_silverMat, new Vector3(90f,0f,0f));
 
-        // 발사 위치
+        // 발사 위치 (-Z면, 포드가 타겟 방향으로 향하는 쪽)
         GameObject lp = new GameObject($"LaunchPoint_{idx}");
         lp.transform.SetParent(parent,false);
-        lp.transform.localPosition    = lPos + new Vector3(0f,0f,0.7f);
+        lp.transform.localPosition    = lPos + new Vector3(0f,0f,-0.7f);
         lp.transform.localEulerAngles = new Vector3(0f,0f,0f);
         if (idx < _tubes.Length) _tubes[idx] = lp.transform;
 
@@ -327,36 +329,37 @@ public class THAADLauncher : MonoBehaviour
 
         Vector3 toTarget = targetPos - _podYaw.position;
 
-        // ── Yaw: 포드 front(-Z)이 타겟을 향하도록 방향 반전 ─
+        // ── Yaw: _podYaw.forward가 타겟 반대 → 포드 -Z면이 타겟을 향함 ─
         float flatDist = Mathf.Sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
         if (flatDist > 0.01f)
         {
             Quaternion yawTgt = Quaternion.LookRotation(
-                new Vector3(-toTarget.x, 0f, -toTarget.z).normalized, Vector3.up);
+                -new Vector3(toTarget.x, 0f, toTarget.z).normalized, Vector3.up);
             _podYaw.rotation = Quaternion.Slerp(
                 _podYaw.rotation, yawTgt, Time.deltaTime * trackSmoothing);
         }
 
-        // ── Pitch: 수평거리와 높이차로 elevation 직접 계산 ─
+        // ── Pitch: 꼭대기(+Y)가 타겟 고도를 정확히 가리키려면 elev-90° ──
         float elev = Mathf.Atan2(toTarget.y, Mathf.Max(flatDist, 0.1f)) * Mathf.Rad2Deg;
         elev = Mathf.Clamp(elev, 0f, 82f);
+        float podAngle = Mathf.Clamp(elev - 90f, -85f, 0f);
 
-        Quaternion pitchTgt = Quaternion.Euler(-elev, 0f, 0f);
+        Quaternion pitchTgt = Quaternion.Euler(podAngle, 0f, 0f);
         _podPitch.localRotation = Quaternion.Slerp(
             _podPitch.localRotation, pitchTgt, Time.deltaTime * trackSmoothing);
-
     }
 
     IEnumerator FireWhenAimed(GameObject target)
     {
         _isRotating = true;
 
-        // 포드 forward가 타겟을 5° 이내로 향하면 발사
+        // yaw가 타겟 수평 방향에 8° 이내로 수렴하면 발사
         while (target != null)
         {
-            Vector3 toTarget  = target.transform.position - _podPitch.position;
-            float   aimAngle  = Vector3.Angle(_podPitch.forward, toTarget.normalized);
-            if (aimAngle < 5f) break;
+            Vector3 toTarget      = target.transform.position - _podYaw.position;
+            Vector3 flatToTarget  = new Vector3(toTarget.x, 0f, toTarget.z).normalized;
+            float   yawAngle      = Vector3.Angle(-_podYaw.forward, flatToTarget);
+            if (yawAngle < 8f) break;
             yield return null;
         }
 
@@ -377,9 +380,19 @@ public class THAADLauncher : MonoBehaviour
         Transform tube = _tubes[_nextTube];
         if (tube == null) return;
 
-        // 포드 최상단 위에서 생성 (발사대 각도와 무관하게 항상 위쪽)
-        Vector3 spawnPos = _podPivot.position + Vector3.up * 5f;
-        GameObject missile = Instantiate(missilePrefab, spawnPos, tube.rotation);
+        // 실제 튜브 출구에서 발사 (포드 -Z면 = 타겟 방향)
+        Vector3 spawnPos = tube.position;
+
+        // 포드 -Z가 발사 방향 (yaw negation 사용)
+        Vector3 firingDir = -_podPitch.forward;
+        if (_trackedTarget != null)
+        {
+            Vector3 toTarget = (_trackedTarget.transform.position - spawnPos).normalized;
+            if (toTarget != Vector3.zero) firingDir = toTarget;
+        }
+        Quaternion spawnRot = Quaternion.LookRotation(firingDir, Vector3.up);
+
+        GameObject missile = Instantiate(missilePrefab, spawnPos, spawnRot);
         Destroy(missile, 12f);
         _nextTube++;
 
@@ -390,6 +403,16 @@ public class THAADLauncher : MonoBehaviour
 
     // AimCamera에서 포드 피치 방향 참조용
     public Transform GetPodPitch() => _podPitch;
+
+    // AimCamera TopCap 기준점 참조용
+    public Transform GetTopCap() => _topCap;
+
+    // AimCamera에서 현재 발사 튜브 위치 참조용
+    public Transform GetNextTube()
+    {
+        if (_tubes == null || _tubes.Length == 0) return null;
+        return _tubes[_nextTube % _tubes.Length];
+    }
 
     // ── 헬퍼 ─────────────────────────────────────────────
     GameObject Box(string n, Vector3 lp, Vector3 ls, Material m)
